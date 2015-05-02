@@ -1,7 +1,7 @@
 use v6;
 
 class ZMachine::File {
-  has $.filename = q{a-out.z5};
+  has $.filename = !!! "filename not specified";
   has $.filesize = 0xF000;
 
   # has $.fh = lazy { say 123 };
