@@ -5,9 +5,7 @@ use ZMachine::Util;
 use ZMachine::Story;
 use ZMachine::ZSCII;
 
-my $story = ZMachine::Story.new(
-  serial => '150502',
-);
+my $story = ZMachine::Story.new;
 
 my $pos = $story.add-string('goodbye', "Goodbye!\n");
 
