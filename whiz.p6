@@ -9,4 +9,14 @@ my $story = ZMachine::Story.new(
   serial => '150502',
 );
 
+my $pos = $story.add-string('goodbye', "Goodbye!\n");
+
+my $hello = ZMachine::ZSCII.new.to-zscii("Hello, world.\n");
+
+my $start-routine = mkbyte(0xb2) ~ $hello       # print
+                  ~ mkbyte(0x87) ~ mkword($pos) # print_addr
+                  ~ mkbyte(186);                # quit
+
+$story.add-routine('start', $start-routine);
+
 $story.write-to-file('a-out.z5');

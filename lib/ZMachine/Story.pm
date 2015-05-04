@@ -1,27 +1,64 @@
 use v6;
+# vim: ft=perl6
+
 class ZMachine::Story {
   use ZMachine::File;
   use ZMachine::Util;
   use ZMachine::ZSCII;
 
-  has $.serial;
+  has $.serial = do {
+    my $now = DateTime.new(now);
+    sprintf "%02d%02d%02d",
+      $now.year.substr(2,2),
+      $now.month,
+      $now.day;
+  };
+
+  has $!zscii = ZMachine::ZSCII.new;
+
+  has $!next-routine-addr = 0x4500;
+  has %!routines;
+
+  has $!next-string-addr = 0x4000;
+  has %!strings;
+
+  method add-routine(Str $name, Buf $code) {
+    my $len = $code.bytes;
+    my %to-add = (pos => $!next-routine-addr, code => $code);
+    %!routines{ $name } = %to-add;
+    $!next-routine-addr += $len;
+    return %to-add<pos>;
+  }
+
+  method routine-pos(Str $name) {
+    my $routine = %!routines{$name};
+    return !!! "no routine named {$name}" unless $routine;
+    return $routine<pos>;
+  }
+
+  method add-string(Str $name, Str $str) {
+    my $buf = $!zscii.to-zscii($str);
+    my $len = $buf.bytes;
+    my %to-add = (pos => $!next-string-addr, buf => $buf);
+    %!strings{ $name } = %to-add;
+    $!next-string-addr += $len;
+    return %to-add<pos>;
+  }
 
   method write-to-file($filename) {
     my $file  = ZMachine::File.new(filename => $filename);
-
-    my $zscii = ZMachine::ZSCII.new;
 
     $file.fh.print( chr(0) x $file.filesize );
 
     ## START HEADER
     $file.write-at(0x00, mkbyte(5));      # story file version
     $file.write-at(0x04, mkword(0x1230)); # base address of high memory
-    $file.write-at(0x06, mkword(0x4500)); # PC initial value
+    $file.write-at(0x06, mkword($.routine-pos('start'))); # PC initial value
     $file.write-at(0x08, mkword(0x1000)); # address of dictionary
     $file.write-at(0x0A, mkword(0x2000)); # address of object table
     $file.write-at(0x0C, mkword(0x3000)); # address of global variables table
     $file.write-at(0x0E, mkword(0x4000)); # base address of static memory
-    $file.write-at(0x12, '130116'.encode('ascii'));    # serial number
+    $file.write-at(0x12, $.serial.encode('ascii'));    # serial number
     $file.write-at(0x18, mkword(0x5000)); # address of abbreviations table
     $file.write-at(0x1A, mkword($file.filesize / 4)); # length of file (divided by 4, in v5)
 
@@ -38,15 +75,13 @@ class ZMachine::Story {
     $file.write-at(0x36, mkword(0x0000)); # address of header extension table; (0 = none)
     ## END HEADER
 
-    $file.write-at(0x4000, $zscii.to-zscii("Goodbye!\n"));
+    for %!strings.kv -> $name, $todo {
+      $file.write-at($todo<pos>, $todo<buf>);
+    }
 
-    my $hello = $zscii.to-zscii("Hello, world.\n");
-
-    $file.write-at(0x4500,
-      mkbyte(0xb2), $hello,       # print
-      mkbyte(0x87), mkword(0x4000), # print_addr
-      mkbyte(186),                  # quit
-    );
+    for %!routines.kv -> $name, $todo {
+      $file.write-at($todo<pos>, $todo<code>);
+    }
 
     $file.close;
   }

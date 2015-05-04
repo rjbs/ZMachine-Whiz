@@ -1,4 +1,5 @@
 use v6;
+# vim: ft=perl6
 
 class ZMachine::File {
   has $.filename = !!! "filename not specified";
@@ -13,10 +14,14 @@ class ZMachine::File {
     return $!fh;
   }
 
+  method seek-to (Int $pos) {
+    $.fh.seek($pos, 0);
+  }
+
   method close { $.fh.close }
 
   method write-at ($pos, *@bufs) {
-    $.fh.seek($pos, 0);
+    $.seek-to($pos);
     my $written = 0;
     $written += $.fh.write($_) for @bufs;
     return $written ?? $written !! fail("nothing got written");
