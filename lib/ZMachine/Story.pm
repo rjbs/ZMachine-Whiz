@@ -16,6 +16,8 @@ class ZMachine::Story {
 
   has $!zscii = ZMachine::ZSCII.new;
 
+  method encode-string(Str $str) { $!zscii.to-zscii($str) }
+
   has $!next-routine-addr = 0x4500;
   has %!routines;
 
@@ -37,7 +39,7 @@ class ZMachine::Story {
   }
 
   method add-string(Str $name, Str $str) {
-    my $buf = $!zscii.to-zscii($str);
+    my $buf = $.encode-string($str);
     my $len = $buf.bytes;
     my %to-add = (pos => $!next-string-addr, buf => $buf);
     %!strings{ $name } = %to-add;
