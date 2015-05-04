@@ -6,6 +6,8 @@ class ZMachine::Story {
   use ZMachine::Util;
   use ZMachine::ZSCII;
 
+  my $.version = 5;
+
   has $.serial = do {
     my $now = DateTime.new(now);
     sprintf "%02d%02d%02d",
@@ -53,7 +55,7 @@ class ZMachine::Story {
     $file.fh.print( chr(0) x $file.filesize );
 
     ## START HEADER
-    $file.write-at(0x00, mkbyte(5));      # story file version
+    $file.write-at(0x00, mkbyte($.version));  # story file version
     $file.write-at(0x04, mkword(0x1230)); # base address of high memory
     $file.write-at(0x06, mkword($.routine-pos('start'))); # PC initial value
     $file.write-at(0x08, mkword(0x1000)); # address of dictionary
