@@ -46,6 +46,7 @@ class ZMachine::ZSCII {
     BF
   >>.map({ :16($_).chr });
 
+  # enum this to 5,7,8
   has $.version = 5;
 
   has %!zscii = %DEFAULT-ZSCII;
@@ -94,13 +95,10 @@ class ZMachine::ZSCII {
       }
     }
 
-    return \%shortcut;
+    return %shortcut;
   }
 
   submethod BUILD {
-    die "only Version 5, 7, and 8 ZSCII are supported at present"
-      unless self.version == any(5,7,8);
-
     die "Unicode translation table exceeds maximum length of 97"
       if $!extra.elems > 97;
 
@@ -147,7 +145,7 @@ class ZMachine::ZSCII {
     # $alphabet = .unicode-to-zscii($alphabet)
     #   if $arg<alphabet_is_unicode>;
 
-    %!shortcut-for = .build-shortcuts-for($!alphabet);
+    %!shortcut-for = shortcuts-for($!alphabet || $DEFAULT-ALPHABET);
   }
 
 # =method encode
@@ -164,7 +162,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method encode (Str $string) {
+  method encode (Str $string is copy) {
     $string ~~ s:g/\n/\x0D/;
 
     my $zscii  = .unicode-to-zscii($string);

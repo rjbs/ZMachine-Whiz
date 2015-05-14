@@ -18,7 +18,9 @@ class ZMachine::Story {
 
   has $!zscii = ZMachine::ZSCII.new;
 
-  method encode-string(Str $str) { $!zscii.to-zscii($str) }
+  method encode-string(Str $str) {
+    $!zscii.encode($str)
+  }
 
   has $!next-routine-addr = 0x4500;
   has %!routines;
