@@ -3,7 +3,8 @@ use v6;
 class ZMachine::ZSCII {
   use ZMachine::Util;
 
-  my constant ZSCII-Buf = buf16;
+  subset ZSCII-Char of uint16 where * < 2 ** 10;
+  my constant ZSCII-Buf  = Buf[ZSCII-Char];
 
   my constant Zchar = uint8;
   my constant Zchars = Buf[Zchar];
@@ -207,18 +208,23 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method unicode-to-zscii (Str $unicode-text) {
-    my $zscii = '';
-    for (0 .. $unicode-text.chars - 1) {
-      my $char = $unicode-text.substr($_, 1);
+  multi method unicode-to-zscii (Str $unicode-text) {
+    # This means that we will normalize your input!  Maybe very important!
+    # -- rjbs, 2015-05-14
+    .unicode-to-zscii($unicode-text.NFC)
+  }
 
+  multi method unicode-to-zscii (Uni $unicode-text) {
+    my $zscii = ZSCII-Buf.new;
+
+    for $unicode-text.list -> $char {
       die(
         sprintf "no ZSCII character available for Unicode U+%05X <%s>",
           $char.ord,
           uniname($char),
       ) unless defined( my $zscii-char = %!zscii-for{ $char } );
 
-      $zscii ~= $zscii-char;
+      $zscii[ +* ] = $zscii-char; # XXX want Buf.push
     }
 
     return $zscii;
@@ -264,29 +270,22 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method zscii-to-zchars (buf16 $zscii) {
-    return '' unless $zscii.elems;
+  method zscii-to-zchars (ZSCII-Buf $zscii) {
+    my $zchars = Zchars.new;
+    return $zchars unless $zscii.elems;
 
-    my $zchars = '';
-    for (0 .. $zscii.elems - 1) {
-      my $zscii-char = $zscii[$_];
+    for $zscii.list -> $zscii-char {
       if (defined (my $shortcut = %!shortcut-for{ $zscii-char })) {
-        $zchars ~= $shortcut;
+        $zchars[ +* ] = $shortcut; # XXX want Buf.push or ~=
         next;
-      }
-
-      if ($zscii-char >= 1024) {
-        Carp::croak(
-          sprintf "can't encode ZSCII codepoint Z-%#05x in Z-characters",
-            $zscii-char
-        );
       }
 
       my $top = ($zscii-char +& 0b1111100000) +> 5;
       my $bot = ($zscii-char +& 0b0000011111);
 
-      $zchars ~= "\x05\x06"; # The escape code for a ten-bit ZSCII character.
-      $zchars ~= chr($top) ~ chr($bot);
+      # XXX this +*..* construction is a bit beyond the pale
+      $zchars[ +* .. * ] = (5, 6); # The escape code for a ten-bit ZSCII character.
+      $zchars[ +* ] = chr($top) ~ chr($bot);
     }
 
     return $zchars;
@@ -316,6 +315,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
+  # XXX surely this is not how to do named args
   method zchars-to-zscii (Zchars $zchars, $arg) {
     $arg //= {};
 
@@ -395,8 +395,8 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method pack-zchars(buf8 $zchars) {
-    my $packed = buf16.new;
+  method pack-zchars(Zchars $zchars) {
+    my $packed = PackedZchars.new;
 
     for $zchars.rotor(3, :partial) -> @input {
       my @triple is default(5) = @input;
@@ -407,7 +407,9 @@ class ZMachine::ZSCII {
 
       $value +|= (0x8000) if @triple.elems < 2;
 
-      $packed[ +* ] = $value;
+      my $top    = $value +> 8;
+      my $bottom = $value +& 255;
+      $packed[ +* .. * ] = $value; # XXX desperately wanting Buf.push
     }
 
     return $packed;
