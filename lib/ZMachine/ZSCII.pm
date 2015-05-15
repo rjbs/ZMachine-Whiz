@@ -154,18 +154,43 @@ class ZMachine::ZSCII {
     return %shortcut;
   }
 
-  submethod BUILD {
+  # has ZMachineVersion $.version = 5;
+  # has %!zscii = %DEFAULT-ZSCII;
+  # has $!unicode-table = @DEFAULT-UNICODE-TABLE;
+  # has @!alphabet = @DEFAULT-ALPHABET;
+
+  submethod BUILD(
+    :%!zscii = %DEFAULT-ZSCII,
+    :$!version = 5,
+    :@!unicode-table = @DEFAULT-UNICODE-TABLE,
+    :$alphabet,
+  )  {
+    # The default alphabet is entirely made up of characters that are the same
+    # in Unicode and ZSCII.  If a user wants to put "extra characters" into the
+    # alphabet table, though, the alphabet should contain ZSCII values.  When
+    # we're building a ZMachine::ZSCII using the contents of the story file's
+    # alphabet table, that's easy.  If we're building a codec to *produce* a
+    # story file, it's less trivial, because we don't want to think about the
+    # specific ZSCII codepoints for the Unicode text we'll encode.
+    #
+    # Instead, we let them supply the alphabet as a string (Str/Uni) which we
+    # then convert into ZSCII characters.
+    #
+    # XXX This implementation is totally bogus.  We need to initialize the
+    # Unicode translation table first, then convert the user-supplied @alphabet
+    # into ZSCII characters using that.  The below only works, really, for
+    # Latin-1.
+    # -- rjbs, 2015-05-15
+    @!alphabet = $alphabet ?? $alphabet.split('')>>.ord !! @DEFAULT-ALPHABET;
+
     die "Unicode translation table exceeds maximum length of 97"
-      if $!unicode-table.elems > 97;
+      if @!unicode-table.elems > 97;
 
-    # Why is this needed? -- rjbs, 2015-05-14
-    %!zscii ||= %DEFAULT-ZSCII;
-
-    for (0 .. $!unicode-table.elems - 1) {
+    for (0 .. @!unicode-table.elems - 1) {
       die "tried to add ambiguous Z->U mapping"
         if %!zscii{ chr(155 + $_) }:exists;
 
-      my $u-char = $!unicode-table[$_];
+      my $u-char = @!unicode-table[$_];
 
       # Extra characters must go into the Unicode substitution table, which can
       # only represent characters with codepoints between 0 and 0xFFFF.  See
@@ -184,25 +209,6 @@ class ZMachine::ZSCII {
 
       %!zscii-for{ $unicode-char } = $zscii-char;
     }
-
-    # The default alphabet is entirely made up of characters that are the same
-    # in Unicode and ZSCII.  If a user wants to put "extra characters" into the
-    # alphabet table, though, the alphabet should contain ZSCII values.  When
-    # we're building a ZMachine::ZSCII using the contents of the story file's
-    # alphabet table, that's easy.  If we're building a codec to *produce* a
-    # story file, it's less trivial, because we don't want to think about the
-    # specific ZSCII codepoints for the Unicode text we'll encode.
-    #
-    # We provide alphabet_is_unicode to let the user say "my alphabet is
-    # supplied in Unicode, please convert it to ZSCII during construction."
-    # -- rjbs, 2013-01-19
-    # my $alphabet = %arg<alphabet> || @DEFAULT-ALPHABET;
-
-    # # It's okay if the user supplies alphabet_is_unicode but not alphabet,
-    # # because the default alphabet is all characters with the same value in
-    # # both character sets! -- rjbs, 2013-01-20
-    # $alphabet = .unicode-to-zscii($alphabet)
-    #   if $arg<alphabet_is_unicode>;
 
     %!shortcut-for = shortcuts-for(@!alphabet || @DEFAULT-ALPHABET);
   }
