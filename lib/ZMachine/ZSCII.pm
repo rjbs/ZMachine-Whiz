@@ -436,15 +436,15 @@ class ZMachine::ZSCII {
 #
 # =cut
 #
-# sub make_dict_length {
-#   my ($self, $zchars) = @_;
-#
-#   my $length = $self->{version} >= 5 ? 9 : 6;
-#   $zchars = substr $zchars, 0, $length;
-#   $zchars .= "\x05" x ($length - length($zchars));
-#
-#   return $zchars;
-# }
+  method make-dict-length(Zchars $zchars) {
+    my $length = $.version >= 5 ?? 9 !! 6;
+
+    my $return = $zchars.subbuf(0, $length);
+
+    $return[ +* .. * ] = 5 xx ($length - $zchars.elems);
+
+    return $return;
+  }
 
 # =method pack_zchars
 #
