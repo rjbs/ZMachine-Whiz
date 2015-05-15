@@ -74,7 +74,7 @@ class ZMachine::ZSCII {
   # These are the default contents of the "Unicode translation table," which
   # enumerates the characters that can be used even though they are not in the
   # alphabet.  They are explicitly Unicode codepoints between 0 and 0xFFFF.
-  my @DEFAULT-EXTRA = <
+  my @DEFAULT-UNICODE-TABLE = <
     E4 F6 FC C4 D6 DC DF BB       AB EB EF FF CB CF E1 E9
     ED F3 FA FD C1 C9 CD D3       DA DD E0 E8 EC F2 F9 C0
     C8 CC D2 D9
@@ -84,6 +84,9 @@ class ZMachine::ZSCII {
     BF
   >.map({ :16($_).chr });
 
+  # This is the version of the Z-Machine that we target.  We stick to 5,7,8,
+  # which have one set of semantics.  v1-v4,v6 are left for future endeavors.
+  #
   # Making ZMachineVersion an Enum required using a constructor like
   # ZMachineVersion(5).  That seemed like a PITA. -- rjbs, 2015-05-15
   subset ZMachineVersion of Int where * == any(5,7,8);
@@ -91,23 +94,27 @@ class ZMachine::ZSCII {
 
   has %!zscii = %DEFAULT-ZSCII;
 
+  has $!unicode-table = @DEFAULT-UNICODE-TABLE;
+
+  # This will map some ZSCII characters to Zchar bufs.  It has an entry for
+  # every ZSCII character found in the alphabet.  It could later be expanded to
+  # include Unicode translation table characters, too, if useful.
   has %!shortcut-for;
 
-  # Why is this an arrayref and not, like alphabets, a string?
-  # Alphabets are strings because they're guaranteed to fit in bytestrings.
-  # You can't put a ZSCII character over 0xFF in the alphabet, because it can't
-  # be put in the story file's alphabet table!  By using a string, it's easy to
-  # just pass in the alphabet from memory to/from the codec.  On the other
-  # hand, the Unicode translation table stores Unicode codepoint values packed
-  # into words, and it's not a good fit for use in the codec.  Maybe a
-  # ZMachine::Util will be useful for packing/unpacking Unicode translation
-  # tables.
-  has $!extra = @DEFAULT-EXTRA;
-
+  # This will map Unicode characters to the ZSCII codepoint.
   has %!zscii-for;
 
+  # This is the per-codec alphabet.
   has $!alphabet = $DEFAULT-ALPHABET;
 
+  # When the user has supplied a custom alphabet, we want to verify that it's
+  # acceptable.
+  # XXX We should also around this time convert the user-provided Uni/Str into
+  # a ZSCII buf.  That means we need to process the Unicode translation table
+  # first, so that we can see that the user-provided ł in the alphabet needs to
+  # be represented as ZSCII character X from the UTT.  (This is also one good
+  # reason that we need the alphabet to be stored as ZSCII codepoints, not
+  # Unicode strings.)
   sub validate-alphabet ($alphabet)  {
     return !!! "alphabet table was not 78 entries long"
       unless $alphabet.chars == 78;
@@ -143,16 +150,16 @@ class ZMachine::ZSCII {
 
   submethod BUILD {
     die "Unicode translation table exceeds maximum length of 97"
-      if $!extra.elems > 97;
+      if $!unicode-table.elems > 97;
 
     # Why is this needed? -- rjbs, 2015-05-14
     %!zscii ||= %DEFAULT-ZSCII;
 
-    for (0 .. $!extra.elems - 1) {
+    for (0 .. $!unicode-table.elems - 1) {
       die "tried to add ambiguous Z->U mapping"
         if %!zscii{ chr(155 + $_) }:exists;
 
-      my $u-char = $!extra[$_];
+      my $u-char = $!unicode-table[$_];
 
       # Extra characters must go into the Unicode substitution table, which can
       # only represent characters with codepoints between 0 and 0xFFFF.  See
