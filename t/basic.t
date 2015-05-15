@@ -51,6 +51,13 @@ ok(1, "this ran");
       mkbuf(uint8, <04 0D 0A 11 11 14 05 13 00 1C 14 17 11 09 05 12 05 07>),
       "zscii-to-zchars on a trivial string",
     );
+
+    my $packed = $z.pack-zchars($zchars);
+    is-deeply(
+      $packed,
+      mkbuf(uint8, <11 AA 46 34 16 60 72 97 45 25 C8 A7>),
+      "pack-zchars on a trivial string"
+    );
   }
 
   my $ztext = $z.encode($text);
@@ -62,7 +69,7 @@ ok(1, "this ran");
   );
 
   my $zchars = $z.unpack-zchars( $ztext );
-  my $want   = mkbuf(uint16,
+  my $want   = mkbuf(uint8,
                 #      H  e  l  l  o     , __  w  o  r  l  d     .    \n
                 <  04 0D 0A 11 11 14 05 13 00 1C 14 17 11 09 05 12 05 07>);
 

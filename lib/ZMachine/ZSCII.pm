@@ -320,9 +320,7 @@ class ZMachine::ZSCII {
 # =cut
 
   # XXX surely this is not how to do named args
-  method zchars-to-zscii (Zchars $zchars, $arg) {
-    $arg //= {};
-
+  method zchars-to-zscii (Zchars $zchars, $arg = {}) {
     my $zscii = ZSCII-Buf.new;
     my $alphabet = 0;
 
@@ -354,7 +352,7 @@ class ZMachine::ZSCII {
       }
 
       if ($zchar >= 0x06 && $zchar <= 0x1F) {
-        $zscii[ +* ] = $.alphabet[ (26 * $alphabet) + $zchar - 6];
+        $zscii[ +* ] = $!alphabet[ (26 * $alphabet) + $zchar - 6];
         $alphabet = 0;
         next;
       }
@@ -402,18 +400,20 @@ class ZMachine::ZSCII {
   method pack-zchars(Zchars $zchars) {
     my $packed = PackedZchars.new;
 
+    my $loops = 0;
     for $zchars.rotor(3, :partial) -> @input {
+      $loops++;
       my @triple is default(5) = @input;
 
       my $value = @triple[0] +< 10
                +| @triple[1] +<  5
                +| @triple[2];
 
-      $value +|= (0x8000) if @triple.elems < 2;
+      $value +|= (0x8000) if $loops * 3 >= $zchars.elems;
 
       my $top    = $value +> 8;
       my $bottom = $value +& 255;
-      $packed[ +* .. * ] = $value; # XXX desperately wanting Buf.push
+      $packed[ +* .. * ] = ($top, $bottom); # XXX desperately wanting Buf.push
     }
 
     return $packed;
@@ -442,7 +442,8 @@ class ZMachine::ZSCII {
       # XXX: Probably allow this to warn and `last` -- rjbs, 2013-01-18
       die "input continues after terminating byte" if $terminate;
 
-      my $n = $word.unpack('n');
+      my $n = $word[0] +< 8
+            + $word[1];
       $terminate = $n +& 0x8000;
 
       my $c1 = ($n +& 0b0111110000000000) +> 10;
