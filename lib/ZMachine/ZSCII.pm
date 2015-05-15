@@ -50,9 +50,17 @@ class ZMachine::ZSCII {
     # 0x0FF - 0x3FF are undefined and never (?) used
   );
 
-  # We can use these characters below because they all (save for the magic
-  # A2-C6) are the same in Unicode/ASCII/ZSCII. -- rjbs, 2013-01-18
-  my $DEFAULT-ALPHABET = join('',
+  # The "alphabet" is a codec-specific character set.  Most of the time, a
+  # Zchar is a direct index into alphabet zero, the first 26 characters in the
+  # alphabet.  Shift Zchars cause the next Zchar to pick from alphabet one or
+  # two.  These 78 characters are stored in a sequence to pick from later.
+  # -- rjbs, 2015-05-15
+  #
+  # XXX Since this stores ZSCII characters, probably it should be ZSCII-Buf and
+  # not a Str, so I should look at redoing this later.  Probably what I want is
+  # for the user to supply a Str or Uni, but for the alphabet to be immediately
+  # translated to a ZSCII-Buf for storage. -- rjbs, 2015-05-15
+  my constant $DEFAULT-ALPHABET = join('',
     'a' .. 'z', # A0
     'A' .. 'Z', # A1
     (           # A2
@@ -63,7 +71,10 @@ class ZMachine::ZSCII {
     ),
   );
 
-  my @DEFAULT-EXTRA = <<
+  # These are the default contents of the "Unicode translation table," which
+  # enumerates the characters that can be used even though they are not in the
+  # alphabet.  They are explicitly Unicode codepoints between 0 and 0xFFFF.
+  my @DEFAULT-EXTRA = <
     E4 F6 FC C4 D6 DC DF BB       AB EB EF FF CB CF E1 E9
     ED F3 FA FD C1 C9 CD D3       DA DD E0 E8 EC F2 F9 C0
     C8 CC D2 D9
@@ -71,7 +82,7 @@ class ZMachine::ZSCII {
     E2 EA EE F4 FB C2 CA CE       D4 DB E5 C5 F8 D8 E3 F1
     F5 C3 D1 D5 E6 C6 E7 C7       FE F0 DE D0 A3 153 152 A1
     BF
-  >>.map({ :16($_).chr });
+  >.map({ :16($_).chr });
 
   # Making ZMachineVersion an Enum required using a constructor like
   # ZMachineVersion(5).  That seemed like a PITA. -- rjbs, 2015-05-15
