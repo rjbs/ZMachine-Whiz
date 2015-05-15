@@ -352,7 +352,9 @@ class ZMachine::ZSCII {
       }
 
       if ($zchar >= 0x06 && $zchar <= 0x1F) {
-        $zscii[ +* ] = $!alphabet[ (26 * $alphabet) + $zchar - 6];
+        $!alphabet = $DEFAULT-ALPHABET; # XXX <-- due to init being hosed
+        my $index = 26 * $alphabet + $zchar - 6;
+        $zscii[ +* ] = $!alphabet.substr($index, 1).ord;
         $alphabet = 0;
         next;
       }
