@@ -60,7 +60,7 @@ class ZMachine::ZSCII {
   # not a Str, so I should look at redoing this later.  Probably what I want is
   # for the user to supply a Str or Uni, but for the alphabet to be immediately
   # translated to a ZSCII-Buf for storage. -- rjbs, 2015-05-15
-  my constant $DEFAULT-ALPHABET = join('',
+  my constant $DEFAULT-ALPHABET = (
     'a' .. 'z', # A0
     'A' .. 'Z', # A1
     (           # A2
@@ -69,7 +69,7 @@ class ZMachine::ZSCII {
       (0 .. 9),
       < . , ! ? _ # ' " / \ - : ( ) >,
     ),
-  );
+  ).flat.map: *.ord;
 
   # These are the default contents of the "Unicode translation table," which
   # enumerates the characters that can be used even though they are not in the
@@ -117,13 +117,13 @@ class ZMachine::ZSCII {
   # Unicode strings.)
   sub validate-alphabet ($alphabet)  {
     return !!! "alphabet table was not 78 entries long"
-      unless $alphabet.chars == 78;
+      unless $alphabet.elems == 78;
 
     return !!! "alphabet character 52 not set to 0x000"
-      unless $alphabet.substr(52, 1) eq 0.chr;
+      unless $alphabet[52] == 0;
 
     return !!! "alphabet table contains characters over 0xFF"
-      if $alphabet ~~ /<-[\x00..\xFF]>/;
+      if $alphabet.grep: * > 0xFF;
   }
 
   sub shortcuts-for ($alphabet) {
@@ -141,7 +141,7 @@ class ZMachine::ZSCII {
         $res[0] = 0x03 + $i if $i;
 
         $res[ +* ] = $j + 6;
-        %shortcut{ $alphabet.substr($offset + $j, 1).ord } = $res;
+        %shortcut{ $alphabet[ $offset + $j ] } = $res;
       }
     }
 
@@ -400,7 +400,7 @@ class ZMachine::ZSCII {
       if ($zchar >= 0x06 && $zchar <= 0x1F) {
         $!alphabet = $DEFAULT-ALPHABET; # XXX <-- due to init being hosed
         my $index = 26 * $alphabet + $zchar - 6;
-        $zscii[ +* ] = $!alphabet.substr($index, 1).ord;
+        $zscii[ +* ] = $!alphabet[$index];
         $alphabet = 0;
         next;
       }
