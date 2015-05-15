@@ -54,13 +54,19 @@ class ZMachine::ZSCII {
   # Zchar is a direct index into alphabet zero, the first 26 characters in the
   # alphabet.  Shift Zchars cause the next Zchar to pick from alphabet one or
   # two.  These 78 characters are stored in a sequence to pick from later.
+  #
+  # Achtung!  No alphabet character can be >0xFF.  The alphabet table is
+  # serialized into a sequence of bytes!
+  #
   # -- rjbs, 2015-05-15
   #
-  # XXX Since this stores ZSCII characters, probably it should be ZSCII-Buf and
+  # XXX When the user provides an alphabet, they will likely provide it as a
+  # Str or Uni, which is cool, but we should immediately translate it into a
+  # sequence of ZSCII codepoints.
   # not a Str, so I should look at redoing this later.  Probably what I want is
   # for the user to supply a Str or Uni, but for the alphabet to be immediately
   # translated to a ZSCII-Buf for storage. -- rjbs, 2015-05-15
-  my constant $DEFAULT-ALPHABET = (
+  my constant @DEFAULT-ALPHABET = (
     'a' .. 'z', # A0
     'A' .. 'Z', # A1
     (           # A2
@@ -94,7 +100,7 @@ class ZMachine::ZSCII {
 
   has %!zscii = %DEFAULT-ZSCII;
 
-  has $!unicode-table = @DEFAULT-UNICODE-TABLE;
+  has @!unicode-table = @DEFAULT-UNICODE-TABLE;
 
   # This will map some ZSCII characters to Zchar bufs.  It has an entry for
   # every ZSCII character found in the alphabet.  It could later be expanded to
@@ -105,7 +111,7 @@ class ZMachine::ZSCII {
   has %!zscii-for;
 
   # This is the per-codec alphabet.
-  has $!alphabet = $DEFAULT-ALPHABET;
+  has @!alphabet = @DEFAULT-ALPHABET;
 
   # When the user has supplied a custom alphabet, we want to verify that it's
   # acceptable.
@@ -190,7 +196,7 @@ class ZMachine::ZSCII {
     # We provide alphabet_is_unicode to let the user say "my alphabet is
     # supplied in Unicode, please convert it to ZSCII during construction."
     # -- rjbs, 2013-01-19
-    # my $alphabet = %arg<alphabet> || $DEFAULT-ALPHABET;
+    # my $alphabet = %arg<alphabet> || @DEFAULT-ALPHABET;
 
     # # It's okay if the user supplies alphabet_is_unicode but not alphabet,
     # # because the default alphabet is all characters with the same value in
@@ -198,7 +204,7 @@ class ZMachine::ZSCII {
     # $alphabet = .unicode-to-zscii($alphabet)
     #   if $arg<alphabet_is_unicode>;
 
-    %!shortcut-for = shortcuts-for($!alphabet || $DEFAULT-ALPHABET);
+    %!shortcut-for = shortcuts-for(@!alphabet || @DEFAULT-ALPHABET);
   }
 
 # =method encode
@@ -398,9 +404,9 @@ class ZMachine::ZSCII {
       }
 
       if ($zchar >= 0x06 && $zchar <= 0x1F) {
-        $!alphabet = $DEFAULT-ALPHABET; # XXX <-- due to init being hosed
+        @!alphabet = @DEFAULT-ALPHABET; # XXX <-- due to init being hosed
         my $index = 26 * $alphabet + $zchar - 6;
-        $zscii[ +* ] = $!alphabet[$index];
+        $zscii[ +* ] = @!alphabet[$index];
         $alphabet = 0;
         next;
       }
