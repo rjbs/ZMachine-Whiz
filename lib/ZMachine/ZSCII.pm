@@ -3,16 +3,42 @@ use v6;
 class ZMachine::ZSCII {
   use ZMachine::Util;
 
+  # The ZSCII codecs truck in these types:
+  # * Unicode strings of input.  We need to be able to handle denormalized
+  #   forms, in case people plan on doing really bizarre stuff with their
+  #   Z-Machine's memory.
+  # * ZSCII characters, which we represent as unsigned integers in ten bit
+  #   space, and ZSCII buffers.
+  # * Zchars, represented by bytes with values in five bit space
+  # * Packed Zchars, in which a sequence of Zchars are packed three to a word,
+  #   with the final word having its high bit set
+
+  # XXX I'd like to subset the type to disallow things that won't fit in ten
+  # bits, but when I do that, I get this error:
+  #   MVMArray: bindpos expected object register
+  # ...so I'm leaving it unconstrainted for now. -- rjbs, 2015-05-15
+  #
   # subset ZSCII-Char of uint16 where * < 2 ** 10;
+
   my constant ZSCII-Char = uint16;
   my constant ZSCII-Buf  = Buf[ZSCII-Char];
 
+  # subset Zchar of uint8 where * < 2 ** 5;
   my constant Zchar = uint8;
   my constant Zchars = Buf[Zchar];
   my constant PackedZchars = Buf[uint8];
 
-  # This maps ZSCII codepoints to
-  my %DEFAULT-ZSCII{Int} = (
+  # This maps ZSCII-Char to Unicode character, and is defined in the spec.
+  #
+  # XXX I would have made this a hash over ZSCII-Char keys, but got the error:
+  # Type check failed in binding key; expected 'uint16' but got 'Int'
+  # -- rjbs, 2015-05-15
+  #
+  # XXX I also wanted to say "my constant %DEFAULT-ZSCII{Int}" but got the
+  # error:
+  # Missing initializer on constant declaration
+  # -- rjbs, 2015-05-15
+  my constant %DEFAULT-ZSCII := Hash[Str, Int].new(
     0x00 => "\c[NULL]",
     0x08 => "\c[DELETE]",
     0x0D => "\x0D",
