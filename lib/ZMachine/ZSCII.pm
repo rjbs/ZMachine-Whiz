@@ -47,8 +47,10 @@ class ZMachine::ZSCII {
     BF
   >>.map({ :16($_).chr });
 
-  # enum this to 5,7,8
-  has $.version = 5;
+  # Making ZMachineVersion an Enum required using a constructor like
+  # ZMachineVersion(5).  That seemed like a PITA. -- rjbs, 2015-05-15
+  subset ZMachineVersion of Int where * == any(5,7,8);
+  has ZMachineVersion $.version = 5;
 
   has %!zscii = %DEFAULT-ZSCII;
 
