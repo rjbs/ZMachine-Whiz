@@ -251,7 +251,7 @@ class ZMachine::ZSCII {
   method zscii-to-unicode(buf16 $zscii) {
     my $unicode = '';
     for (0 .. $zscii.elems - 1) {
-      my $char = $zscii.substr($_, 1);
+      my $char = $zscii[$_];
 
       Carp::croak(
         sprintf "no Unicode character available for ZSCII %#v05x", $char,
