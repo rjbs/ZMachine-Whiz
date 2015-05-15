@@ -377,8 +377,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  # XXX surely this is not how to do named args
-  method zchars-to-zscii (Zchars $zchars, $arg = {}) {
+  method zchars-to-zscii (Zchars $zchars, Bool :$allow-early-termination?) {
     my $zscii = ZSCII-Buf.new;
     my $alphabet = 0;
 
@@ -395,7 +394,7 @@ class ZMachine::ZSCII {
 
       if ($alphabet == 2 && $zchar == 0x06) {
         if ($zchars.elems < $pos + 2) {
-          last if $arg<allow_early_termination>;
+          last if $allow-early-termination;
           die("ten-bit ZSCII encoding segment terminated early")
         }
 
