@@ -3,7 +3,8 @@ use v6;
 class ZMachine::ZSCII {
   use ZMachine::Util;
 
-  subset ZSCII-Char of uint16 where * < 2 ** 10;
+  # subset ZSCII-Char of uint16 where * < 2 ** 10;
+  my constant ZSCII-Char = uint16;
   my constant ZSCII-Buf  = Buf[ZSCII-Char];
 
   my constant Zchar = uint8;
@@ -11,7 +12,7 @@ class ZMachine::ZSCII {
   my constant PackedZchars = Buf[uint8];
 
   # This maps ZSCII codepoints to
-  my %DEFAULT-ZSCII = (
+  my %DEFAULT-ZSCII{Int} = (
     0x00 => "\c[NULL]",
     0x08 => "\c[DELETE]",
     0x0D => "\x0D",
@@ -82,16 +83,19 @@ class ZMachine::ZSCII {
   sub shortcuts-for ($alphabet) {
     validate-alphabet($alphabet);
 
-    my %shortcut = (q{ } => chr(0));
+    my %shortcut = (q{ }.ord => Zchars.new(0));
 
     for (0 .. 2) -> $i {
       my $offset = $i * 26;
-      my $prefix = $i ?? chr(0x03 + $i) !! '';
 
       for (0 .. 25) -> $j {
         next if $i == 2 and $j == 0; # that guy is magic! -- rjbs, 2013-01-18
 
-        %shortcut{ $alphabet.substr($offset + $j, 1) } = $prefix ~ chr($j + 6);
+        my $res = Zchars.new;
+        $res[0] = 0x03 + $i if $i;
+
+        $res[ +* ] = $j + 6;
+        %shortcut{ $alphabet.substr($offset + $j, 1).ord } = $res;
       }
     }
 
@@ -101,6 +105,9 @@ class ZMachine::ZSCII {
   submethod BUILD {
     die "Unicode translation table exceeds maximum length of 97"
       if $!extra.elems > 97;
+
+    # Why is this needed? -- rjbs, 2015-05-14
+    %!zscii ||= %DEFAULT-ZSCII;
 
     for (0 .. $!extra.elems - 1) {
       die "tried to add ambiguous Z->U mapping"
@@ -120,7 +127,7 @@ class ZMachine::ZSCII {
     for %!zscii.keys.sort -> $zscii-char {
       my $unicode-char = %!zscii{$zscii-char};
 
-      die  "tried to add ambiguous U->Z mapping"
+      die "tried to add ambiguous U->Z mapping"
         if %!zscii-for{ $unicode-char }:exists;
 
       %!zscii-for{ $unicode-char } = $zscii-char;
@@ -165,10 +172,10 @@ class ZMachine::ZSCII {
   method encode (Str $string is copy) {
     $string ~~ s:g/\n/\x0D/;
 
-    my $zscii  = .unicode-to-zscii($string);
-    my $zchars = .zscii-to-zchars($zscii);
+    my $zscii  = $.unicode-to-zscii($string);
+    my $zchars = $.zscii-to-zchars($zscii);
 
-    return .pack-zchars($zchars);
+    return $.pack-zchars($zchars);
   }
 
 # =method decode
@@ -185,9 +192,9 @@ class ZMachine::ZSCII {
 # =cut
 
   method decode (Buf $bytestring) {
-    my $zchars  = .unpack-zchars( $bytestring );
-    my $zscii   = .zchars-to-zscii( $zchars );
-    my $unicode = .zscii-to-unicode( $zscii );
+    my $zchars  = $.unpack-zchars( $bytestring );
+    my $zscii   = $.zchars-to-zscii( $zchars );
+    my $unicode = $.zscii-to-unicode( $zscii );
 
     $unicode ~~ s:g/\x0D/\n/;
 
@@ -209,20 +216,20 @@ class ZMachine::ZSCII {
   multi method unicode-to-zscii (Str $unicode-text) {
     # This means that we will normalize your input!  Maybe very important!
     # -- rjbs, 2015-05-14
-    .unicode-to-zscii($unicode-text.NFC)
+    $.unicode-to-zscii($unicode-text.NFC)
   }
 
   multi method unicode-to-zscii (Uni $unicode-text) {
     my $zscii = ZSCII-Buf.new;
 
-    for $unicode-text.list -> $char {
+    for $unicode-text.list>>.chr -> $char {
       die(
         sprintf "no ZSCII character available for Unicode U+%05X <%s>",
           $char.ord,
           uniname($char),
       ) unless defined( my $zscii-char = %!zscii-for{ $char } );
 
-      $zscii[ +* ] = $zscii-char; # XXX want Buf.push
+      $zscii[ +* ] = 0 + $zscii-char; # XXX want Buf.push
     }
 
     return $zscii;
@@ -274,7 +281,7 @@ class ZMachine::ZSCII {
 
     for $zscii.list -> $zscii-char {
       if (defined (my $shortcut = %!shortcut-for{ $zscii-char })) {
-        $zchars[ +* ] = $shortcut; # XXX want Buf.push or ~=
+        $zchars[ +* .. * ] = $shortcut.list; # XXX want Buf.push or ~=
         next;
       }
 
@@ -282,8 +289,7 @@ class ZMachine::ZSCII {
       my $bot = ($zscii-char +& 0b0000011111);
 
       # XXX this +*..* construction is a bit beyond the pale
-      $zchars[ +* .. * ] = (5, 6); # The escape code for a ten-bit ZSCII character.
-      $zchars[ +* ] = chr($top) ~ chr($bot);
+      $zchars[ +* .. * ] = (5, 6, $top, $bot); # The escape code for a ten-bit ZSCII character.
     }
 
     return $zchars;
