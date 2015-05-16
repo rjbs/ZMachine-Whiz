@@ -149,11 +149,6 @@ class ZMachine::ZSCII {
     return %shortcut;
   }
 
-  # has ZMachineVersion $.version = 5;
-  # has %!zscii = %DEFAULT-ZSCII;
-  # has $!unicode-table = @DEFAULT-UNICODE-TABLE;
-  # has @!alphabet = @DEFAULT-ALPHABET;
-
   submethod BUILD(
     :%!zscii = %DEFAULT-ZSCII,
     :$!version = 5,
