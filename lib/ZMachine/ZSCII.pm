@@ -333,7 +333,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method zscii-to-zchars (ZSCII-Buf $zscii) {
+  method zscii-to-zchars (ZSCII-Buf $zscii) returns Zchars {
     my $zchars = Zchars.new;
     return $zchars unless $zscii.elems;
 
@@ -377,7 +377,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method zchars-to-zscii (Zchars $zchars, Bool :$allow-early-termination?) {
+  method zchars-to-zscii (Zchars $zchars, Bool :$allow-early-termination?) returns ZSCII-Buf {
     my $zscii = ZSCII-Buf.new;
     my $alphabet = 0;
 
@@ -436,7 +436,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 #
-  method make-dict-length(Zchars $zchars) {
+  method make-dict-length(Zchars $zchars) returns Zchars {
     my $length = $.version >= 5 ?? 9 !! 6;
 
     my $return = $zchars.subbuf(0, $length);
@@ -456,7 +456,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method pack-zchars(Zchars $zchars) {
+  method pack-zchars(Zchars $zchars) returns PackedZchars {
     my $packed = PackedZchars.new;
 
     my $loops = 0;
@@ -491,7 +491,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method unpack-zchars (PackedZchars $packed) {
+  method unpack-zchars (PackedZchars $packed) returns Zchars {
     die "bytestring of packed zchars is not an even number of bytes"
       unless $packed.elems %% 2;
 
