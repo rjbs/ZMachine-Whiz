@@ -245,67 +245,70 @@ ok(1, "this ran");
 #     );
 #   };
 # }
-# 
-# subtest "dictionary words" => sub {
-#   {
-#     my $word = "cable";
-#     my $zchars = $z->zscii_to_zchars( $z->unicode_to_zscii( $word ) );
-# 
-#     is(length $zchars, 5, "as zchars, 'cable' is 5 chars");
-# 
-#     my $dict_cable = $z->make_dict_length($zchars);
-#     is(length $dict_cable, 9, "trimmed to length, it is nine");
-# 
-#     is(substr($dict_cable, 0, 5), $zchars, "the first five are the word");
-#     is(substr($dict_cable, 6, 3), "\x05\x05\x05", "the rest are x05");
-#   }
-# 
-#   {
-#     my $word = "twelve-inch"; # You know, like the cable.
-#     my $zchars = $z->zscii_to_zchars( $z->unicode_to_zscii( $word ) );
-# 
-#     is(length $zchars, 12, "as zchars, 'twelve-inch' is 12 chars");
-# 
-#     my $dict_12i = $z->make_dict_length($zchars);
-#     is(length $dict_12i, 9, "trimmed to length, it is nine");
-#   }
-# 
-#   {
-#     my $word = "queensrÿche";
-#              #  12345678CDE
-#     my $zchars = $z->zscii_to_zchars( $z->unicode_to_zscii( $word ) );
-# 
-#     is(length $zchars, 14, "as zchars, band name is 14 chars");
-# 
-#     my $dict_ryche = $z->make_dict_length($zchars);
-#     is(length $dict_ryche, 9, "trimmed to length, it is nine");
-# 
-#     {
-#       my $zscii;
-#       my $ok    = eval { $zscii = $z->zchars_to_zscii( $dict_ryche ); 1 };
-#       my $error = $@;
-#       ok(! $ok, "we can't normally decode a word terminated mid-sequence");
-#       like($error, qr/terminated early/, "...and so says the error");
-#     }
-# 
-#     {
-#       my $zscii;
-#       my $ok    = eval {
-#         $zscii = $z->zchars_to_zscii(
-#           $dict_ryche,
-#           { allow_early_termination => 1 },
-#         );
-#         1;
-#       };
-#       my $error = $@;
-#       ok($ok, "...but we can if we pass allow_early_termination")
-#         or diag $error;;
-# 
-#       is($zscii, "queensr", "we get the expected 7 characters");
-#     }
-#   }
-# };
-# 
+
+subtest {
+  {
+    my $word = "cable";
+    my $zchars = $z.zscii-to-zchars( $z.unicode-to-zscii( $word ) );
+
+    is($zchars.elems, 5, "as zchars, 'cable' is 5 chars");
+
+    my $dict-cable = $z.make-dict-length($zchars);
+    is($dict-cable.elems, 9, "trimmed to length, it is nine");
+
+    is-deeply(
+      $dict-cable.subbuf(0, 5),
+      $zchars,
+      "the first five are the word"
+    );
+
+    is-deeply(
+      $dict-cable.subbuf(6, 3),
+      Buf[uint8].new(5,5,5),
+      "the rest are x05",
+    );
+  }
+
+  {
+    my $word = "twelve-inch"; # You know, like the cable.
+    my $zchars = $z.zscii-to-zchars( $z.unicode-to-zscii( $word ) );
+
+    is($zchars.elems, 12, "as zchars, 'twelve-inch' is 12 chars");
+
+    my $dict_12i = $z.make-dict-length($zchars);
+    is($dict_12i.elems, 9, "trimmed to length, it is nine");
+  }
+
+  {
+    my $word = "queensrÿche";
+             #  12345678CDE
+    my $zchars = $z.zscii-to-zchars( $z.unicode-to-zscii( $word ) );
+
+    is($zchars.elems, 14, "as zchars, band name is 14 chars");
+
+    my $dict-ryche = $z.make-dict-length($zchars);
+    is($dict-ryche.elems, 9, "trimmed to length, it is nine");
+
+    {
+      throws-like(
+        sub { my $zscii = $z.zchars-to-zscii( $dict-ryche ); },
+        X::AdHoc,
+        "we can't normally decode a word terminated mid-sequence",
+        message => 'ten-bit ZSCII encoding segment terminated early',
+      );
+    }
+
+    {
+      my $zscii = $z.zchars-to-zscii($dict-ryche, :allow-early-termination);
+      is-deeply(
+        $zscii,
+        Buf[uint16].new("queensr".encode('ASCII').list),
+        "...but we can if we pass allow_early_termination",
+      )
+    }
+  }
+}, "test dictionary words";
+
 # {
 #   my $ok = eval { my $fail_z = ZMachine::ZSCII->new(1); 1 };
 #   my $err = $@;
