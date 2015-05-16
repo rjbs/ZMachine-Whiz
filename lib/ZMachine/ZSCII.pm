@@ -409,7 +409,7 @@ class ZMachine::ZSCII {
         my $next_two = $zchars[ ++$pos, ++$pos ];
 
         my $value = $next_two[0] +< 5
-                  | $next_two[1];
+                 +| $next_two[1];
 
         $zscii[ +* ] = $value;
         $alphabet = 0;
