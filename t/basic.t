@@ -158,11 +158,11 @@ subtest {
   my $zscii = $soviet-z.unicode-to-zscii("Ameri☭ans");
   ok($zscii, "we can encode HAMMER AND SICKLE if we make it an extra");
 
-  is($zscii[4], 157, "the H&S is ZSCII 157");
+  is($zscii[5], 157, "the H&S is ZSCII 157");
   is($zscii.elems, 9, "there are 8 ZSCII charactrs");
   is-deeply(
     $zscii,
-    Buf[uint16].new("Ameri\x9Dans".split('')>>.ord),
+    Buf[uint16].new("Ameri\x[9D]ans".split('')>>.ord),
     "...and they're what we expect too",
   );
 
@@ -191,46 +191,38 @@ subtest {
   );
 }, "custom extra characters";
 
-# for my $test_setup (
-#   [ "\x9D", 'ZSCII'   ],
-#   [ "☭",    'Unicode' ],
-# ) {
-#   my $a2_19   = $test_setup->[0];
-#   my $charset = $test_setup->[1];
-#   subtest "custom alphabet, $charset" => sub {
-#     my $ussr_z = ZMachine::ZSCII->new({
-#       version  => 5,
-#       extra_characters => [ qw( Ж ÿ ☭ ) ],
-#       alphabet => "ABCDEFGHIJLKMNOPQRSTUVWXYZ"
-#                 . "zyxwvutsrqponmlkjihgfedcba"
-#                 . "\0\x0D0123456789.,!?_#'${a2_19}/\\-:()",
-#       alphabet_is_unicode => $charset eq 'Unicode',
-#     });
-# 
-#     my $zscii;
-#     my $ok = eval { $zscii = $ussr_z->unicode_to_zscii("Ameri☭ans"); 1 };
-#     ok($ok, "we can encode HAMMER AND SICKLE if we make it an extra")
-#       or diag "error: $@";
-# 
-#     is(ord(substr($zscii, 5, 1)), 157, "the H&C is ZSCII 157");
-#     is(length($zscii), 9, "there are 8 ZSCII charactrs");
-#     is_binary($zscii, "Ameri\x9Dans", "...and they're what we expect too");
-# 
-#     my $zchars = $ussr_z->zscii_to_zchars($zscii);
-# 
-#     my @expected_zchars = (
-#       chrs(qw(06 04 13 04 1B 04 0E 04 17)),
-#       chrs(qw(05 19)), # not four_zchars because we put it at A2-19
-#       chrs(qw(04 1F 04 12 04 0D)),
-#     );
-# 
-#     is_binary(
-#       $zchars,
-#       (join q{}, @expected_zchars),
-#       "...then the ZSCII to Z-characters",
-#     );
-#   };
-# }
+subtest {
+  my $a2_19   = "☭";
+  my $ussr-z  = ZMachine::ZSCII.new(
+    :version(5),
+    :unicode-table(< Ж ÿ ☭ >),
+    alphabet => "ABCDEFGHIJLKMNOPQRSTUVWXYZ"
+              ~ "zyxwvutsrqponmlkjihgfedcba"
+              ~ "\0\x[0D]0123456789.,!?_#'{$a2_19}/\\-:()",
+  );
+
+  my $zscii = $ussr-z.unicode-to-zscii("Ameri☭ans");
+
+  is($zscii[5], 157, "the H&C is ZSCII 157");
+  is($zscii.elems, 9, "there are 8 ZSCII charactrs");
+  is-deeply(
+    $zscii,
+    Buf[uint16].new("Ameri\x[9D]ans".split('')>>.ord),
+    "...and they're what we expect too",
+  );
+
+  my $zchars = $ussr-z.zscii-to-zchars($zscii);
+
+  is-deeply(
+    $zchars,
+    buf8.new(
+      <06 04 13 04 1B 04 0E 04 17>>>.map({ :16($_) }),
+      <05 19 >>>.map({ :16($_) }), # not four_zchars because we put it at A2-19
+      <04 1F 04 12 04 0D>>>.map({ :16($_) }),
+    );
+    "...then the ZSCII to Z-characters",
+  );
+}, "custom alphabet";
 
 subtest {
   {
