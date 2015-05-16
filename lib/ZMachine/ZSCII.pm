@@ -95,11 +95,8 @@ class ZMachine::ZSCII {
   #
   # Making ZMachineVersion an Enum required using a constructor like
   # ZMachineVersion(5).  That seemed like a PITA. -- rjbs, 2015-05-15
-  #
-  # So then I tried to make this:
-  # subset ZMachineVersion of Int where * == any(5,7,8);
-  #
-  my constant ZMachineVersion = Int;
+
+  subset ZMachineVersion of Int where * == any(5,7,8);
   has ZMachineVersion $.version = 5;
 
   has %!zscii = %DEFAULT-ZSCII;

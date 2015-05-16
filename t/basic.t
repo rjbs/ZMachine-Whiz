@@ -290,7 +290,7 @@ subtest {
 {
   throws-like(
     sub { my $fail-z = ZMachine::ZSCII.new(version => 1); },
-    X::AdHoc,
+    *,
     message => /version/,
     "can't make a v1 ZSCII codec (yet?)",
   );
