@@ -116,13 +116,7 @@ class ZMachine::ZSCII {
 
   # When the user has supplied a custom alphabet, we want to verify that it's
   # acceptable.
-  # XXX We should also around this time convert the user-provided Uni/Str into
-  # a ZSCII buf.  That means we need to process the Unicode translation table
-  # first, so that we can see that the user-provided ł in the alphabet needs to
-  # be represented as ZSCII character X from the UTT.  (This is also one good
-  # reason that we need the alphabet to be stored as ZSCII codepoints, not
-  # Unicode strings.)
-  sub validate-alphabet ($alphabet)  {
+  sub validate-alphabet (Buf $alphabet)  {
     return !!! "alphabet table was not 78 entries long"
       unless $alphabet.elems == 78;
 
