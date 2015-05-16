@@ -323,7 +323,7 @@ class ZMachine::ZSCII {
 #
 # =cut
 
-  method zscii-to-unicode(buf16 $zscii) {
+  method zscii-to-unicode(ZSCII-Buf $zscii) {
     my $unicode = '';
     for (0 .. $zscii.elems - 1) {
       my $char = $zscii[$_];
