@@ -93,9 +93,9 @@ class ZMachine::ZSCII {
   subset ZMachineVersion of Int where * == any(5,7,8);
   has ZMachineVersion $.version = 5;
 
-  has %!zscii-to-char = %DEFAULT-ZSCII-TO-CHAR;
+  has %!zscii-to-char;
 
-  has @!unicode-table = @DEFAULT-UNICODE-TABLE;
+  has @!unicode-table;
 
   # This will map some ZSCII characters to Zchar bufs.  It has an entry for
   # every ZSCII character found in the alphabet.  It could later be expanded to
@@ -103,10 +103,10 @@ class ZMachine::ZSCII {
   has %!shortcut-for;
 
   # This will map Unicode characters to the ZSCII codepoint.
-  has %!zscii-for;
+  has %!char-to-zscii;
 
   # This is the per-codec alphabet.
-  has $!alphabet = $DEFAULT-ALPHABET;
+  has $!alphabet;
 
   # When the user has supplied a custom alphabet, we want to verify that it's
   # acceptable.
@@ -175,9 +175,9 @@ class ZMachine::ZSCII {
       my $unicode-char = %!zscii-to-char{$zscii-char};
 
       die "tried to add ambiguous U->Z mapping"
-        if %!zscii-for{ $unicode-char }:exists;
+        if %!char-to-zscii{ $unicode-char }:exists;
 
-      %!zscii-for{ $unicode-char } = $zscii-char;
+      %!char-to-zscii{ $unicode-char } = $zscii-char;
     }
 
     # The default alphabet is entirely made up of characters that are the same
@@ -196,15 +196,15 @@ class ZMachine::ZSCII {
     # into ZSCII characters using that.  The below only works, really, for
     # Latin-1.
     # -- rjbs, 2015-05-15
-    $!alphabet = $alphabet ?? alphabet-to-zscii($alphabet, %!zscii-for)
+    $!alphabet = $alphabet ?? alphabet-to-zscii($alphabet, %!char-to-zscii)
                            !! $DEFAULT-ALPHABET;
 
     %!shortcut-for = shortcuts-for($!alphabet);
   }
 
-  sub alphabet-to-zscii ($alphabet, %zscii-for) returns ZSCII-Buf {
+  sub alphabet-to-zscii ($alphabet, %char-to-zscii) returns ZSCII-Buf {
     my $ints = $alphabet.split('').map: {
-      %zscii-for{ $_ } // die(
+      %char-to-zscii{ $_ } // die(
         sprintf "no ZSCII character available for Unicode U+%05X <%s>",
           .ord, uniname($_));
     };
@@ -283,7 +283,7 @@ class ZMachine::ZSCII {
         sprintf "no ZSCII character available for Unicode U+%05X <%s>",
           $char.ord,
           uniname($char),
-      ) unless defined( my $zscii-char = %!zscii-for{ $char } );
+      ) unless defined( my $zscii-char = %!char-to-zscii{ $char } );
 
       $zscii[ +* ] = 0 + $zscii-char; # XXX want Buf.push
     }
