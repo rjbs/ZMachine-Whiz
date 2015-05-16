@@ -95,7 +95,11 @@ class ZMachine::ZSCII {
   #
   # Making ZMachineVersion an Enum required using a constructor like
   # ZMachineVersion(5).  That seemed like a PITA. -- rjbs, 2015-05-15
-  subset ZMachineVersion of Int where * == any(5,7,8);
+  #
+  # So then I tried to make this:
+  # subset ZMachineVersion of Int where * == any(5,7,8);
+  #
+  my constant ZMachineVersion = Int;
   has ZMachineVersion $.version = 5;
 
   has %!zscii = %DEFAULT-ZSCII;
@@ -165,6 +169,10 @@ class ZMachine::ZSCII {
     :@!unicode-table = @DEFAULT-UNICODE-TABLE,
     :$alphabet,
   )  {
+    # XXX This would not be needed if I could get subset or enum to work
+    # properly! -- rjbs, 2015-05-15
+    die "bad version" unless $!version == any(5,7,8);
+
     # The default alphabet is entirely made up of characters that are the same
     # in Unicode and ZSCII.  If a user wants to put "extra characters" into the
     # alphabet table, though, the alphabet should contain ZSCII values.  When

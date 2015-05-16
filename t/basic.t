@@ -293,8 +293,8 @@ subtest {
       throws-like(
         sub { my $zscii = $z.zchars-to-zscii( $dict-ryche ); },
         X::AdHoc,
+        message => /terminated.early/,
         "we can't normally decode a word terminated mid-sequence",
-        message => 'ten-bit ZSCII encoding segment terminated early',
       );
     }
 
@@ -309,10 +309,11 @@ subtest {
   }
 }, "test dictionary words";
 
-# {
-#   my $ok = eval { my $fail_z = ZMachine::ZSCII->new(1); 1 };
-#   my $err = $@;
-#   like($err, qr/only version/i, "no support for v1 (yet?)");
-# }
-# 
-# done_testing;
+{
+  throws-like(
+    sub { my $fail-z = ZMachine::ZSCII.new(version => 1); },
+    X::AdHoc,
+    message => /version/,
+    "can't make a v1 ZSCII codec (yet?)",
+  );
+}
