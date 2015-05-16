@@ -56,17 +56,11 @@ class ZMachine::ZSCII {
   # two.  These 78 characters are stored in a sequence to pick from later.
   #
   # Achtung!  No alphabet character can be >0xFF.  The alphabet table is
-  # serialized into a sequence of bytes!
-  #
-  # -- rjbs, 2015-05-15
-  #
-  # XXX When the user provides an alphabet, they will likely provide it as a
-  # Str or Uni, which is cool, but we should immediately translate it into a
-  # sequence of ZSCII codepoints.
-  # not a Str, so I should look at redoing this later.  Probably what I want is
-  # for the user to supply a Str or Uni, but for the alphabet to be immediately
-  # translated to a ZSCII-Buf for storage. -- rjbs, 2015-05-15
-  my constant $DEFAULT-ALPHABET = ZSCII-Buf.new(((
+  # serialized into a sequence of bytes!  I reckon this could be done by making
+  # a Buf over a subset type of uint16 that was basically uint8.  Can this be
+  # done with just uint8 and implicit coercions later?  I don't know.
+  # -- rjbs, 2015-05-16
+  my constant $DEFAULT-ALPHABET = ZSCII-Buf.new: ((
     'a' .. 'z', # A0
     'A' .. 'Z', # A1
     (           # A2
@@ -75,7 +69,7 @@ class ZMachine::ZSCII {
       (0 .. 9),
       < . , ! ? _ # ' " / \ - : ( ) >,
     ),
-  ).flat.map: *.ord).list );
+  ).flat.map: *.ord).list;
 
   # These are the default contents of the "Unicode translation table," which
   # enumerates the characters that can be used even though they are not in the
