@@ -66,7 +66,7 @@ class ZMachine::ZSCII {
   # not a Str, so I should look at redoing this later.  Probably what I want is
   # for the user to supply a Str or Uni, but for the alphabet to be immediately
   # translated to a ZSCII-Buf for storage. -- rjbs, 2015-05-15
-  my constant $DEFAULT-ALPHABET = ZSCII-Buf.new((
+  my constant $DEFAULT-ALPHABET = ZSCII-Buf.new(((
     'a' .. 'z', # A0
     'A' .. 'Z', # A1
     (           # A2
@@ -75,7 +75,7 @@ class ZMachine::ZSCII {
       (0 .. 9),
       < . , ! ? _ # ' " / \ - : ( ) >,
     ),
-  ).flat.map: *.ord );
+  ).flat.map: *.ord).list );
 
   # These are the default contents of the "Unicode translation table," which
   # enumerates the characters that can be used even though they are not in the
@@ -177,7 +177,7 @@ class ZMachine::ZSCII {
       %!zscii{ 155 + $_ } = $u-char;
     }
 
-    for %!zscii.keys.sort -> $zscii-char {
+    for %!zscii.keys>>.Int.sort -> $zscii-char {
       my $unicode-char = %!zscii{$zscii-char};
 
       die "tried to add ambiguous U->Z mapping"
@@ -205,15 +205,16 @@ class ZMachine::ZSCII {
     $!alphabet = $alphabet ?? alphabet-to-zscii($alphabet, %!zscii-for)
                            !! $DEFAULT-ALPHABET;
 
-    %!shortcut-for = shortcuts-for($!alphabet || $DEFAULT-ALPHABET);
+    %!shortcut-for = shortcuts-for($!alphabet);
   }
 
-  sub alphabet-to-zscii ($alphabet, %zscii-for) {
-    $alphabet.split('').map: {
+  sub alphabet-to-zscii ($alphabet, %zscii-for) returns ZSCII-Buf {
+    my $ints = $alphabet.split('').map: {
       %zscii-for{ $_ } // die(
         sprintf "no ZSCII character available for Unicode U+%05X <%s>",
           .ord, uniname($_));
-    }
+    };
+    return ZSCII-Buf.new($ints);
   }
 
 # =method encode
