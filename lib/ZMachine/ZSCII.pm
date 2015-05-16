@@ -34,11 +34,11 @@ class ZMachine::ZSCII {
   # Type check failed in binding key; expected 'uint16' but got 'Int'
   # -- rjbs, 2015-05-15
   #
-  # XXX I also wanted to say "my constant %DEFAULT-ZSCII-TO-STR{Int}" but got
+  # XXX I also wanted to say "my constant %DEFAULT-ZSCII-TO-CHAR{Int}" but got
   # the error:
   #   Missing initializer on constant declaration
   # -- rjbs, 2015-05-15
-  my constant %DEFAULT-ZSCII-TO-STR := Hash[Str, Int].new(
+  my constant %DEFAULT-ZSCII-TO-CHAR := Hash[Str, Int].new(
     0x00 => "\c[NULL]",
     0x08 => "\c[DELETE]",
     0x0D => "\x0D",
@@ -93,7 +93,7 @@ class ZMachine::ZSCII {
   subset ZMachineVersion of Int where * == any(5,7,8);
   has ZMachineVersion $.version = 5;
 
-  has %!zscii = %DEFAULT-ZSCII-TO-STR;
+  has %!zscii-to-char = %DEFAULT-ZSCII-TO-CHAR;
 
   has @!unicode-table = @DEFAULT-UNICODE-TABLE;
 
@@ -144,7 +144,7 @@ class ZMachine::ZSCII {
   }
 
   submethod BUILD(
-    :%!zscii = %DEFAULT-ZSCII-TO-STR,
+    :%!zscii-to-char = %DEFAULT-ZSCII-TO-CHAR,
     :$!version = 5,
     :@!unicode-table = @DEFAULT-UNICODE-TABLE,
     :$alphabet,
@@ -168,11 +168,11 @@ class ZMachine::ZSCII {
       die "tried to add Unicode codepoint greater than U+FFFF"
         if $u-char.ord > 0xFFFF;
 
-      %!zscii{ 155 + $_ } = $u-char;
+      %!zscii-to-char{ 155 + $_ } = $u-char;
     }
 
-    for %!zscii.keys>>.Int.sort -> $zscii-char {
-      my $unicode-char = %!zscii{$zscii-char};
+    for %!zscii-to-char.keys>>.Int.sort -> $zscii-char {
+      my $unicode-char = %!zscii-to-char{$zscii-char};
 
       die "tried to add ambiguous U->Z mapping"
         if %!zscii-for{ $unicode-char }:exists;
@@ -309,9 +309,11 @@ class ZMachine::ZSCII {
     for (0 .. $zscii.elems - 1) {
       my $char = $zscii[$_];
 
+      my $unicode-char = %!zscii-to-char{ $char };
+
       Carp::croak(
         sprintf "no Unicode character available for ZSCII %#v05x", $char,
-      ) unless defined(my $unicode-char = %!zscii{ $char });
+      ) unless defined $unicode-char;
 
       $unicode ~= $unicode-char;
     }
