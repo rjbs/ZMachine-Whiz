@@ -66,7 +66,7 @@ class ZMachine::ZSCII {
   # not a Str, so I should look at redoing this later.  Probably what I want is
   # for the user to supply a Str or Uni, but for the alphabet to be immediately
   # translated to a ZSCII-Buf for storage. -- rjbs, 2015-05-15
-  my constant @DEFAULT-ALPHABET = (
+  my constant $DEFAULT-ALPHABET = ZSCII-Buf.new((
     'a' .. 'z', # A0
     'A' .. 'Z', # A1
     (           # A2
@@ -75,7 +75,7 @@ class ZMachine::ZSCII {
       (0 .. 9),
       < . , ! ? _ # ' " / \ - : ( ) >,
     ),
-  ).flat.map: *.ord;
+  ).flat.map: *.ord );
 
   # These are the default contents of the "Unicode translation table," which
   # enumerates the characters that can be used even though they are not in the
@@ -112,11 +112,11 @@ class ZMachine::ZSCII {
   has %!zscii-for;
 
   # This is the per-codec alphabet.
-  has @!alphabet = @DEFAULT-ALPHABET;
+  has $!alphabet = $DEFAULT-ALPHABET;
 
   # When the user has supplied a custom alphabet, we want to verify that it's
   # acceptable.
-  sub validate-alphabet (Buf $alphabet)  {
+  sub validate-alphabet (ZSCII-Buf $alphabet)  {
     return !!! "alphabet table was not 78 entries long"
       unless $alphabet.elems == 78;
 
@@ -124,10 +124,10 @@ class ZMachine::ZSCII {
       unless $alphabet[52] == 0;
 
     return !!! "alphabet table contains characters over 0xFF"
-      if $alphabet.grep: * > 0xFF;
+      if $alphabet.list.grep: * > 0xFF;
   }
 
-  sub shortcuts-for ($alphabet) {
+  sub shortcuts-for (ZSCII-Buf $alphabet) {
     validate-alphabet($alphabet);
 
     my %shortcut = (q{ }.ord => Zchars.new(0));
@@ -202,10 +202,10 @@ class ZMachine::ZSCII {
     # into ZSCII characters using that.  The below only works, really, for
     # Latin-1.
     # -- rjbs, 2015-05-15
-    @!alphabet = $alphabet ?? alphabet-to-zscii($alphabet, %!zscii-for)
-                           !! @DEFAULT-ALPHABET;
+    $!alphabet = $alphabet ?? alphabet-to-zscii($alphabet, %!zscii-for)
+                           !! $DEFAULT-ALPHABET;
 
-    %!shortcut-for = shortcuts-for(@!alphabet || @DEFAULT-ALPHABET);
+    %!shortcut-for = shortcuts-for($!alphabet || $DEFAULT-ALPHABET);
   }
 
   sub alphabet-to-zscii ($alphabet, %zscii-for) {
@@ -412,9 +412,9 @@ class ZMachine::ZSCII {
       }
 
       if ($zchar >= 0x06 && $zchar <= 0x1F) {
-        @!alphabet = @DEFAULT-ALPHABET; # XXX <-- due to init being hosed
+        $!alphabet = $DEFAULT-ALPHABET; # XXX <-- due to init being hosed
         my $index = 26 * $alphabet + $zchar - 6;
-        $zscii[ +* ] = @!alphabet[$index];
+        $zscii[ +* ] = $!alphabet[$index];
         $alphabet = 0;
         next;
       }
