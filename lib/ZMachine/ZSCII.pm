@@ -34,11 +34,11 @@ class ZMachine::ZSCII {
   # Type check failed in binding key; expected 'uint16' but got 'Int'
   # -- rjbs, 2015-05-15
   #
-  # XXX I also wanted to say "my constant %DEFAULT-ZSCII{Int}" but got the
-  # error:
-  # Missing initializer on constant declaration
+  # XXX I also wanted to say "my constant %DEFAULT-ZSCII-TO-STR{Int}" but got
+  # the error:
+  #   Missing initializer on constant declaration
   # -- rjbs, 2015-05-15
-  my constant %DEFAULT-ZSCII := Hash[Str, Int].new(
+  my constant %DEFAULT-ZSCII-TO-STR := Hash[Str, Int].new(
     0x00 => "\c[NULL]",
     0x08 => "\c[DELETE]",
     0x0D => "\x0D",
@@ -99,7 +99,7 @@ class ZMachine::ZSCII {
   subset ZMachineVersion of Int where * == any(5,7,8);
   has ZMachineVersion $.version = 5;
 
-  has %!zscii = %DEFAULT-ZSCII;
+  has %!zscii = %DEFAULT-ZSCII-TO-STR;
 
   has @!unicode-table = @DEFAULT-UNICODE-TABLE;
 
@@ -150,7 +150,7 @@ class ZMachine::ZSCII {
   }
 
   submethod BUILD(
-    :%!zscii = %DEFAULT-ZSCII,
+    :%!zscii = %DEFAULT-ZSCII-TO-STR,
     :$!version = 5,
     :@!unicode-table = @DEFAULT-UNICODE-TABLE,
     :$alphabet,
