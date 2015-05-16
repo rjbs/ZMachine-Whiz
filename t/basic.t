@@ -219,7 +219,7 @@ subtest {
       <06 04 13 04 1B 04 0E 04 17>>>.map({ :16($_) }),
       <05 19 >>>.map({ :16($_) }), # not four_zchars because we put it at A2-19
       <04 1F 04 12 04 0D>>>.map({ :16($_) }),
-    );
+    ),
     "...then the ZSCII to Z-characters",
   );
 }, "custom alphabet";

@@ -173,30 +173,12 @@ class ZMachine::ZSCII {
     # properly! -- rjbs, 2015-05-15
     die "bad version" unless $!version == any(5,7,8);
 
-    # The default alphabet is entirely made up of characters that are the same
-    # in Unicode and ZSCII.  If a user wants to put "extra characters" into the
-    # alphabet table, though, the alphabet should contain ZSCII values.  When
-    # we're building a ZMachine::ZSCII using the contents of the story file's
-    # alphabet table, that's easy.  If we're building a codec to *produce* a
-    # story file, it's less trivial, because we don't want to think about the
-    # specific ZSCII codepoints for the Unicode text we'll encode.
-    #
-    # Instead, we let them supply the alphabet as a string (Str/Uni) which we
-    # then convert into ZSCII characters.
-    #
-    # XXX This implementation is totally bogus.  We need to initialize the
-    # Unicode translation table first, then convert the user-supplied @alphabet
-    # into ZSCII characters using that.  The below only works, really, for
-    # Latin-1.
-    # -- rjbs, 2015-05-15
-    @!alphabet = $alphabet ?? $alphabet.split('')>>.ord !! @DEFAULT-ALPHABET;
-
     die "Unicode translation table exceeds maximum length of 97"
       if @!unicode-table.elems > 97;
 
     for (0 .. @!unicode-table.elems - 1) {
-      die "tried to add ambiguous Z->U mapping"
-        if %!zscii{ chr(155 + $_) }:exists;
+      # die "tried to add ambiguous Z->U mapping"
+      #   if %!zscii{ chr(155 + $_) }:exists;
 
       my $u-char = @!unicode-table[$_];
 
@@ -218,7 +200,34 @@ class ZMachine::ZSCII {
       %!zscii-for{ $unicode-char } = $zscii-char;
     }
 
+    # The default alphabet is entirely made up of characters that are the same
+    # in Unicode and ZSCII.  If a user wants to put "extra characters" into the
+    # alphabet table, though, the alphabet should contain ZSCII values.  When
+    # we're building a ZMachine::ZSCII using the contents of the story file's
+    # alphabet table, that's easy.  If we're building a codec to *produce* a
+    # story file, it's less trivial, because we don't want to think about the
+    # specific ZSCII codepoints for the Unicode text we'll encode.
+    #
+    # Instead, we let them supply the alphabet as a string (Str/Uni) which we
+    # then convert into ZSCII characters.
+    #
+    # XXX This implementation is totally bogus.  We need to initialize the
+    # Unicode translation table first, then convert the user-supplied @alphabet
+    # into ZSCII characters using that.  The below only works, really, for
+    # Latin-1.
+    # -- rjbs, 2015-05-15
+    @!alphabet = $alphabet ?? alphabet-to-zscii($alphabet, %!zscii-for)
+                           !! @DEFAULT-ALPHABET;
+
     %!shortcut-for = shortcuts-for(@!alphabet || @DEFAULT-ALPHABET);
+  }
+
+  sub alphabet-to-zscii ($alphabet, %zscii-for) {
+    $alphabet.split('').map: {
+      %zscii-for{ $_ } // die(
+        sprintf "no ZSCII character available for Unicode U+%05X <%s>",
+          .ord, uniname($_));
+    }
   }
 
 # =method encode
