@@ -3,27 +3,13 @@ use Test;
 
 use ZMachine::ZSCII;
 
-# sub diag-str {
-#   my ($str) = @_;
-#   for (0 .. length($str)-1) {
-#     my $ord = ord substr($str, $_, 1);
-#     diag sprintf("%02s: Z+%03x | %3s", $_, $ord, $ord);
-#   }
-# }
-# 
-# sub four.zchars {
-#   my $chr = shift;
-#   my $top = ($chr & 0b1111100000) >> 5;
-#   my $bot = ($chr & 0b0000011111);
-# 
-#   return(chr(5), chr(6), chr($top), chr($bot));
-# }
-# 
-# sub chrs { map chr hex, @_; }
-# 
-# sub bytes {
-#   return join q{}, map chr hex, @_;
-# }
+sub four-zchars ($zscii-chr) {
+  my $top = ($zscii-chr +& 0b1111100000) +> 5;
+  my $bot = ($zscii-chr +& 0b0000011111);
+
+  return (5, 6, $top, $bot);
+}
+
 sub mkbuf ($buf-type, @hex-digits) { return Buf[$buf-type].new(@hex-digits.map: { :16($_) }); }
 
 my $z = ZMachine::ZSCII.new(version => 5);
@@ -86,125 +72,125 @@ ok(1, "this ran");
   is($have_text, $text, q{we round-tripped "Hello, world.\n"!});
 }
 
-# subtest "default extra characters in use" => sub {
-#   is(
-#     $z->unicode_to_zscii("\N{LEFT-POINTING DOUBLE ANGLE QUOTATION MARK}"), # «
-#     chr(163),
-#     "naughty French opening quote: U+00AB, Z+0A3",
-#   );
-# 
-#   is(
-#     $z->unicode_to_zscii("\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}"), # »
-#     chr(162),
-#     "naughty French opening quote: U+00AB, Z+0A2",
-#   );
-# 
-#   my $orig    = "«¡Gruß Gott!»";
-# 
-#   my $zscii   = $z->unicode_to_zscii( $orig );
-#   is_binary(
-#     $zscii,
-#     (join q{}, map chr,
-#       qw(163 222 71 114 117 161 32 71 111 116 116 33 162)),
-#       #  «   ¡   G  R   u   ß   __ G  o   t   t   !  »
-#     "converted Unicode string of Latin-1 chars to ZSCII",
-#   );
-# 
-#   is(length($zscii), 13, "the string is 13 ZSCII characters");
-# 
-#   my $zchars  = $z->zscii_to_zchars( $zscii );
-# 
-#   my @expected_zchars = (
-#     four_zchars(163),      # ten-bit char 163
-#     four_zchars(222),      # ten-bit char 222
-#     chrs(qw(04 0C 17 1A)), # G r u
-#     four_zchars(161),      # ten-bit char 161
-#     chrs(qw(00 04 0C 14 19 19 05 14)), # _ G o t t !
-#     four_zchars(162), # ten-bit char 162
-#   );
-# 
-#   is_binary(
-#     $zchars,
-#     (join q{}, @expected_zchars),
-#     "...then the ZSCII to Z-characters",
-#   );
-# 
-#   is(length($zchars), 28, "...there are 28 Z-characters for the 14 ZSCII");
-# 
-#   my $packed  = $z->pack_zchars($zchars);
-#   is(length($packed), 20, "28 Z-characters pack to 10 words (20 bytes)");
-# 
-#   # 20 bytes could, at maximum, encode 30 zchars, which means we'll expect two
-#   # padding zchars at the end
-# 
-#   my $unpacked = $z->unpack_zchars($packed);
-#   is(length($unpacked), 30, "once unpacked, we've got 30; 2 are padding");
-# 
-#   is_binary(
-#     $unpacked,
-#     (join q{}, @expected_zchars, "\x05\x05"),
-#     "we use Z+005 for padding",
-#   );
-# 
-#   my $zscii_again = $z->zchars_to_zscii($unpacked);
-#   is(length($zscii_again), 13, "paddings ignored; as ZSCII, 13 chars again");
-# 
-#   my $unicode = $z->zscii_to_unicode($zscii_again);
-#   eq_or_diff($unicode, $orig, "...and we finish the round trip!");
-# 
-#   {
-#     my $ztext   = $z->encode( $orig );
-#     my $unicode = $z->decode($ztext);
-#     eq_or_diff($unicode, $orig, "it round trips in isolation, too");
-#   }
-# };
-# 
-# subtest "custom extra characters" => sub {
-#   {
-#     my $zscii;
-#     my $ok = eval { $zscii = $z->unicode_to_zscii("Ameri☭ans"); 1 };
-#     ok(! $ok, "we have no HAMMER AND SICKLE by default");
-#   }
-# 
-#   my $soviet_z = ZMachine::ZSCII->new({
-#     version => 5,
-#     extra_characters => [ qw( Ж ÿ ☭ ) ],
-#   });
-# 
-#   my $zscii;
-#   my $ok = eval { $zscii = $soviet_z->unicode_to_zscii("Ameri☭ans"); 1 };
-#   ok($ok, "we can encode HAMMER AND SICKLE if we make it an extra")
-#     or diag "error: $@";
-# 
-#   is(ord(substr($zscii, 5, 1)), 157, "the H&C is ZSCII 157");
-#   is(length($zscii), 9, "there are 8 ZSCII charactrs");
-#   is_binary($zscii, "Ameri\x9Dans", "...and they're what we expect too");
-# 
-#   my $zchars = $soviet_z->zscii_to_zchars($zscii);
-# 
-#   my @expected_zchars = (
-#     chrs(qw(04 06 12 0A 17 0E)),
-#     four_zchars(157),
-#     chrs(qw(06 13 18)),
-#   );
-# 
-#   is_binary(
-#     $zchars,
-#     (join q{}, @expected_zchars),
-#     "...then the ZSCII to Z-characters",
-#   );
-# 
-#   my $zscii_again = $soviet_z->zchars_to_zscii($zchars);
-# 
-#   eq_or_diff($zscii_again, $zscii, "ZSCII->zchars->ZSCII round tripped");
-# 
-#   is(
-#     $soviet_z->decode( $soviet_z->encode("Ameri☭ans") ),
-#     "Ameri☭ans",
-#     "...and we can round trip it",
-#   );
-# };
-# 
+subtest {
+  is(
+    $z.unicode-to-zscii("\c[LEFT-POINTING DOUBLE ANGLE QUOTATION MARK]"), # «
+    buf16.new(163),
+    "naughty French opening quote: U+00AB, Z+0A3",
+  );
+
+  is(
+    $z.unicode-to-zscii("\c[RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK]"), # »
+    buf16.new(162),
+    "naughty French opening quote: U+00AB, Z+0A2",
+  );
+
+  my $orig    = "«¡Gruß Gott!»";
+
+  my $zscii   = $z.unicode-to-zscii( $orig );
+  is-deeply(
+    $zscii,
+    mkbuf(uint16, <a3 de 47 72 75 a1 20 47 6f 74 74 21 a2>),
+                 #  «  ¡  G  R  u  ß __  G  o  t  t  !  »
+    "converted Unicode string of Latin-1 chars to ZSCII",
+  );
+
+  is($zscii.elems, 13, "the string is 13 ZSCII characters");
+
+  my $zchars  = $z.zscii-to-zchars( $zscii );
+
+  my $want-zchars = buf8.new(
+    four-zchars(163),      # ten-bit char 163
+    four-zchars(222),      # ten-bit char 222
+    <04 0C 17 1A>>>.map({ :16($_) }),         # G r u
+    four-zchars(161),      # ten-bit char 161
+    <00 04 0C 14 19 19 05 14>>>.map({ :16($_) }), # _ G o t t !
+    four-zchars(162), # ten-bit char 162
+  );
+
+  is_deeply(
+    $zchars,
+    $want-zchars,
+    "...then the ZSCII to Z-characters",
+  );
+
+  is($zchars.elems, 28, "...there are 28 Z-characters for the 14 ZSCII");
+
+  my $packed  = $z.pack-zchars($zchars);
+  is($packed.elems, 20, "28 Z-characters pack to 10 words (20 bytes)");
+
+  # 20 bytes could, at maximum, encode 30 zchars, which means we'll expect two
+  # padding zchars at the end
+
+  my $unpacked = $z.unpack-zchars($packed);
+  is($unpacked.elems, 30, "once unpacked, we've got 30; 2 are padding");
+
+  is-deeply(
+    $unpacked,
+    buf8.new( $want-zchars.list, 5, 5),
+    "we use Z+005 for padding",
+  );
+
+  my $zscii-again = $z.zchars-to-zscii($unpacked);
+  is($zscii-again.elems, 13, "paddings ignored; as ZSCII, 13 chars again");
+
+  my $unicode = $z.zscii-to-unicode($zscii-again);
+  is($unicode, $orig, "...and we finish the round trip!");
+
+  {
+    my $ztext   = $z.encode($orig);
+    my $unicode = $z.decode($ztext);
+    is($unicode, $orig, "it round trips in isolation, too");
+  }
+}, "default extra characters in use";
+
+subtest {
+  dies-ok(
+    sub { my $zscii = $z.unicode-to-zscii("Ameri☭ans") },
+    "we have no HAMMER AND SICKLE (☭) by default",
+  );
+
+  my $soviet-z = ZMachine::ZSCII.new(
+    :version(5),
+    :unicode-table( < Ж ÿ ☭ > ),
+  );
+
+  my $zscii = $soviet-z.unicode-to-zscii("Ameri☭ans");
+  ok($zscii, "we can encode HAMMER AND SICKLE if we make it an extra");
+
+  is($zscii[4], 157, "the H&S is ZSCII 157");
+  is($zscii.elems, 9, "there are 8 ZSCII charactrs");
+  is-deeply(
+    $zscii,
+    Buf[uint16].new("Ameri\x9Dans".split('')>>.ord),
+    "...and they're what we expect too",
+  );
+
+  my $zchars = $soviet-z.zscii-to-zchars($zscii);
+
+  my $want-zchars = buf8.new(
+    <04 06 12 0A 17 0E>>>.map({ :16($_) }),
+    four-zchars(157),
+    <06 13 18>>>.map({ :16($_) }),
+  );
+
+  is-deeply(
+    $zchars,
+    $want-zchars,
+     "...then the ZSCII to Z-characters",
+  );
+
+  my $zscii-again = $soviet-z.zchars-to-zscii($zchars);
+
+  is-deeply($zscii-again, $zscii, "ZSCII->zchars->ZSCII round tripped");
+
+  is(
+    $soviet-z.decode( $soviet-z.encode("Ameri☭ans") ),
+    "Ameri☭ans",
+    "...and we can round trip it",
+  );
+}, "custom extra characters";
+
 # for my $test_setup (
 #   [ "\x9D", 'ZSCII'   ],
 #   [ "☭",    'Unicode' ],
