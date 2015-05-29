@@ -285,7 +285,7 @@ class ZMachine::ZSCII {
           uniname($char),
       ) unless defined( my $zscii-char = %!char-to-zscii{ $char } );
 
-      $zscii[ +* ] = 0 + $zscii-char; # XXX want Buf.push
+      $zscii.push($zscii-char);
     }
 
     return $zscii;
