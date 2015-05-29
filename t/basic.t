@@ -108,7 +108,7 @@ subtest {
     four-zchars(162), # ten-bit char 162
   );
 
-  is_deeply(
+  is-deeply(
     $zchars,
     $want-zchars,
     "...then the ZSCII to Z-characters",
