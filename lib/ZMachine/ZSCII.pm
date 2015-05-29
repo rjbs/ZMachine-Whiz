@@ -339,15 +339,15 @@ class ZMachine::ZSCII {
 
     for $zscii.list -> $zscii-char {
       if (defined (my $shortcut = %!shortcut-for{ $zscii-char })) {
-        $zchars[ +* .. * ] = $shortcut.list; # XXX want Buf.push or ~=
+        $zchars.push($shortcut.list);
         next;
       }
 
       my $top = ($zscii-char +& 0b1111100000) +> 5;
       my $bot = ($zscii-char +& 0b0000011111);
 
-      # XXX this +*..* construction is a bit beyond the pale
-      $zchars[ +* .. * ] = (5, 6, $top, $bot); # The escape code for a ten-bit ZSCII character.
+      # The escape code for a ten-bit ZSCII character.
+      $zchars.push(5, 6, $top, $bot);
     }
 
     return $zchars;
@@ -387,7 +387,7 @@ class ZMachine::ZSCII {
 
       my $zchar = $zchars[$pos];
 
-      if ($zchar == 0) { $zscii[ +* ] = 0x20; next; } # XXX want Buf.push
+      if ($zchar == 0) { $zscii.push(0x20); next; }
 
       if    ($zchar == 0x04) { $alphabet = 1; next }
       elsif ($zchar == 0x05) { $alphabet = 2; next }
@@ -403,7 +403,7 @@ class ZMachine::ZSCII {
         my $value = $next_two[0] +< 5
                  +| $next_two[1];
 
-        $zscii[ +* ] = $value;
+        $zscii.push($value);
         $alphabet = 0;
         next;
       }
@@ -411,7 +411,7 @@ class ZMachine::ZSCII {
       if ($zchar >= 0x06 && $zchar <= 0x1F) {
         $!alphabet = $DEFAULT-ALPHABET; # XXX <-- due to init being hosed
         my $index = 26 * $alphabet + $zchar - 6;
-        $zscii[ +* ] = $!alphabet[$index];
+        $zscii.push($!alphabet[$index]);
         $alphabet = 0;
         next;
       }
@@ -441,7 +441,7 @@ class ZMachine::ZSCII {
 
     my $return = $zchars.subbuf(0, $length);
 
-    $return[ +* .. * ] = 5 xx ($length - $zchars.elems);
+    $return[ +* .. * ] = 5 xx ($length - $zchars.elems); # XXX use .push?
 
     return $return;
   }
@@ -472,7 +472,7 @@ class ZMachine::ZSCII {
 
       my $top    = $value +> 8;
       my $bottom = $value +& 255;
-      $packed[ +* .. * ] = ($top, $bottom); # XXX desperately wanting Buf.push
+      $packed.push($top, $bottom);
     }
 
     return $packed;
