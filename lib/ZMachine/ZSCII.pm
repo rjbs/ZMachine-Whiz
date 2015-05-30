@@ -441,7 +441,8 @@ class ZMachine::ZSCII {
 
     my $return = $zchars.subbuf(0, $length);
 
-    $return[ +* .. * ] = 5 xx ($length - $zchars.elems); # XXX use .push?
+    # XXX: Needing that .list below is a bit blah. -- rjbs, 2015-05-29
+    $return.push( (5 xx ($length - $zchars.elems)).list );
 
     return $return;
   }
