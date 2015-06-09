@@ -379,9 +379,7 @@ class ZMachine::ZSCII {
     my $alphabet = 0;
 
     my $pos = 0;
-    # loop ($pos; $pos < $zchars.elems; $pos++) {
-    while ($pos < $zchars.elems) {
-      NEXT { $pos++ }
+    loop ($pos = 0; $pos < $zchars.elems; $pos++) {
 
       my $zchar = $zchars[$pos];
 
