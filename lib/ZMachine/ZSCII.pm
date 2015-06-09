@@ -1,8 +1,6 @@
 use v6;
 
 class ZMachine::ZSCII {
-  use ZMachine::Util;
-
   # The ZSCII codecs truck in these types:
   # * Unicode strings of input.  We need to be able to handle denormalized
   #   forms, in case people plan on doing really bizarre stuff with their
@@ -60,7 +58,7 @@ class ZMachine::ZSCII {
   # a Buf over a subset type of uint16 that was basically uint8.  Can this be
   # done with just uint8 and implicit coercions later?  I don't know.
   # -- rjbs, 2015-05-16
-  my constant $DEFAULT-ALPHABET = ZSCII-Buf.new: ((
+  my constant $DEFAULT-ALPHABET = ZSCII-Buf.new((
     'a' .. 'z', # A0
     'A' .. 'Z', # A1
     (           # A2
@@ -69,7 +67,7 @@ class ZMachine::ZSCII {
       (0 .. 9),
       < . , ! ? _ # ' " / \ - : ( ) >,
     ),
-  ).flat.map: *.ord).list;
+  ).flat.map: *.ord);
 
   # These are the default contents of the "Unicode translation table," which
   # enumerates the characters that can be used even though they are not in the
@@ -149,10 +147,6 @@ class ZMachine::ZSCII {
     :@!unicode-table = @DEFAULT-UNICODE-TABLE,
     :$alphabet,
   )  {
-    # XXX This would not be needed if I could get subset or enum to work
-    # properly! -- rjbs, 2015-05-15
-    die "bad version" unless $!version == any(5,7,8);
-
     die "Unicode translation table exceeds maximum length of 97"
       if @!unicode-table.elems > 97;
 
@@ -171,7 +165,8 @@ class ZMachine::ZSCII {
       %!zscii-to-char{ 155 + $_ } = $u-char;
     }
 
-    for %!zscii-to-char.keys>>.Int.sort -> $zscii-char {
+    # XXX Can I use Hash.invert? (Pm) -- rjbs, 2015-06-08
+    for %!zscii-to-char.keys>>.Int -> $zscii-char {
       my $unicode-char = %!zscii-to-char{$zscii-char};
 
       die "tried to add ambiguous U->Z mapping"
@@ -196,6 +191,7 @@ class ZMachine::ZSCII {
     # into ZSCII characters using that.  The below only works, really, for
     # Latin-1.
     # -- rjbs, 2015-05-15
+    # XXX ^ is that still true?
     $!alphabet = $alphabet ?? alphabet-to-zscii($alphabet, %!char-to-zscii)
                            !! $DEFAULT-ALPHABET;
 
@@ -278,8 +274,9 @@ class ZMachine::ZSCII {
   multi method unicode-to-zscii (Uni $unicode-text) {
     my $zscii = ZSCII-Buf.new;
 
+    # Uni should get .comb?? -- rjbs, 2015-06-08
     for $unicode-text.list>>.chr -> $char {
-      die(
+      fail(
         sprintf "no ZSCII character available for Unicode U+%05X <%s>",
           $char.ord,
           uniname($char),
@@ -382,6 +379,7 @@ class ZMachine::ZSCII {
     my $alphabet = 0;
 
     my $pos = 0;
+    # loop ($pos; $pos < $zchars.elems; $pos++) {
     while ($pos < $zchars.elems) {
       NEXT { $pos++ }
 
@@ -458,22 +456,19 @@ class ZMachine::ZSCII {
 
   method pack-zchars(Zchars $zchars) returns PackedZchars {
     my $packed = PackedZchars.new;
+    return $packed unless $zchars.elems;
 
-    my $loops = 0;
-    for $zchars.rotor(3, :partial) -> @input {
-      $loops++;
-      my @triple is default(5) = @input;
-
-      my $value = @triple[0] +< 10
-               +| @triple[1] +<  5
-               +| @triple[2];
-
-      $value +|= (0x8000) if $loops * 3 >= $zchars.elems;
+    for $zchars.list -> $a, $b = 5, $c = 5 {
+      my $value = $a +< 10
+               +| $b +<  5
+               +| $c;
 
       my $top    = $value +> 8;
       my $bottom = $value +& 255;
       $packed.push($top, $bottom);
     }
+
+    $packed[*-2] +|= 0x80;
 
     return $packed;
   }
@@ -491,18 +486,20 @@ class ZMachine::ZSCII {
 #
 # =cut
 
+  # XXX Why couldn't I make this @packed and drop the elems? -- rjbs,
+  # 2015-06-08
   method unpack-zchars (PackedZchars $packed) returns Zchars {
-    die "bytestring of packed zchars is not an even number of bytes"
-      unless $packed.elems %% 2;
+    fail "bytestring of packed zchars is not an even number of bytes"
+      unless @$packed %% 2;
 
     my $terminate;
     my $zchars = Zchars.new;
-    for $packed.rotor(2) -> $word {
+    for @$packed -> $top, $bot {
       # XXX: Probably allow this to warn and `last` -- rjbs, 2013-01-18
       die "input continues after terminating byte" if $terminate;
 
-      my $n = $word[0] +< 8
-            + $word[1];
+      my $n = $top +< 8
+            + $bot;
       $terminate = $n +& 0x8000;
 
       my $c1 = ($n +& 0b0111110000000000) +> 10;
