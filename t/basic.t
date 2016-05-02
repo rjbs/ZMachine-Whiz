@@ -162,7 +162,7 @@ subtest {
   is($zscii.elems, 9, "there are 8 ZSCII charactrs");
   is-deeply(
     $zscii,
-    Buf[uint16].new("Ameri\x[9D]ans".split('')>>.ord),
+    Buf[uint16].new("Ameri\x[9D]ans".comb()>>.ord),
     "...and they're what we expect too",
   );
 

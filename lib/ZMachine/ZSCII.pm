@@ -336,7 +336,7 @@ class ZMachine::ZSCII {
 
     for $zscii.list -> $zscii-char {
       if (defined (my $shortcut = %!shortcut-for{ $zscii-char })) {
-        $zchars.push($shortcut.list);
+        $zchars.push(|$shortcut);
         next;
       }
 
@@ -380,7 +380,6 @@ class ZMachine::ZSCII {
 
     my $pos = 0;
     loop ($pos = 0; $pos < $zchars.elems; $pos++) {
-
       my $zchar = $zchars[$pos];
 
       if ($zchar == 0) { $zscii.push(0x20); next; }
