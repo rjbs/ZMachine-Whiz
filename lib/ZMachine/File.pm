@@ -15,7 +15,7 @@ class ZMachine::File {
   }
 
   method seek-to (Int $pos) {
-    $.fh.seek($pos, 0);
+    $.fh.seek($pos, SeekFromBeginning);
   }
 
   method close { $.fh.close }
