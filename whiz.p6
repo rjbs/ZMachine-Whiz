@@ -7,13 +7,13 @@ use ZMachine::ZSCII;
 
 my $story = ZMachine::Story.new;
 
-my $pos = $story.add-string('goodbye', "Goodbye!\n");
+my Int $pos = $story.add-string('goodbye', "Goodbye!\n");
 
-my $hello = $story.encode-string("Hello, world.\n");
+my Buf $hello = $story.encode-string("Hello, world.\n");
 
-my $start-routine = mkbyte(0xb2) ~ $hello       # print
-                  ~ mkbyte(0x87) ~ mkword($pos) # print_addr
-                  ~ mkbyte(186);                # quit
+my Buf $start-routine = mkbyte(0xb2) ~ $hello       # print
+                      ~ mkbyte(0x87) ~ mkword($pos) # print_addr
+                      ~ mkbyte(186);                # quit
 
 $story.add-routine('start', $start-routine);
 
