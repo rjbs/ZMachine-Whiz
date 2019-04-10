@@ -1,4 +1,6 @@
 use v6;
+use experimental :pack;
+
 module ZMachine::Util {
   proto mkword($) is export {*}
   multi sub mkword (Int $i) { pack 'n', $i }
